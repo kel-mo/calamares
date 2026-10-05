@@ -1,0 +1,37 @@
+Author: Kel Modderman <kelvmod@gmail.com>
+Description: Don't re-initialize FileSystemFactory for "all" filesystems.
+ setConfigurationMap() starts initPartitionCoreModule() on a worker thread,
+ whose doInit() calls FileSystemFactory::init(), then reads
+ directoryFilesystemRestrictions on the main thread. An entry with
+ allowedFilesystemTypes: ["all"] makes DirFSRestrictLayout::fullFSList()
+ call FileSystemFactory::init() as well and walk its map. init() deletes
+ every FileSystem in the shared map, so Calamares can crash at startup.
+ Build the list from the FileSystem::Type enum instead.
+Forwarded: no
+Last-Update: 2026-10-05
+
+--- a/src/modules/partition/core/DirFSRestrictLayout.cpp
++++ b/src/modules/partition/core/DirFSRestrictLayout.cpp
+@@ -23,7 +23,6 @@
+ #include "JobQueue.h"
+ 
+ #include <kpmcore/fs/filesystem.h>
+-#include <kpmcore/fs/filesystemfactory.h>
+ 
+ #include <QSet>
+ 
+@@ -221,11 +220,11 @@ DirFSRestrictLayout::anyAllowedFSTypes()
+ QList< FileSystem::Type >
+ DirFSRestrictLayout::fullFSList()
+ {
++    // Not from FileSystemFactory: PartitionCoreModule re-initializes it on a worker thread
+     QList< FileSystem::Type > typeList;
+-    FileSystemFactory::init();
+-    for ( auto fs : FileSystemFactory::map() )
++    for ( int t = FileSystem::Type::Unknown; t < FileSystem::Type::__lastType; ++t )
+     {
+-        typeList.append( fs->type() );
++        typeList.append( static_cast< FileSystem::Type >( t ) );
+     }
+     return typeList;
+ }

@@ -1,3 +1,12 @@
+calamares (3.4.2-1.2) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Build the "all" filesystem list without re-initializing kpmcore's
+    shared table, so the installer no longer crashes at startup now and
+    then.
+
+ -- Kel Modderman <kelvmod@gmail.com>  Mon, 05 Oct 2026 14:24:20 +1000
+
 calamares (3.4.2-1.1) unstable; urgency=medium
 
   * Non-maintainer upload.
