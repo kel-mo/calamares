@@ -1,1 +1,2 @@
 partition-fullfslist-race.patch
+networkcfg-keep-resolv-symlink.patch

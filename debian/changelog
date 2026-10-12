@@ -1,3 +1,12 @@
+calamares (3.4.2-1.3) UNRELEASED; urgency=medium
+
+  * Non-maintainer upload.
+  * Keep the installed system's /etc/resolv.conf symlink, such as the
+    systemd-resolved stub, instead of replacing it with the live
+    system's file.
+
+ -- Kel Modderman <kelvmod@gmail.com>  Mon, 12 Oct 2026 19:42:25 +1000
+
 calamares (3.4.2-1.2) unstable; urgency=medium
 
   * Non-maintainer upload.

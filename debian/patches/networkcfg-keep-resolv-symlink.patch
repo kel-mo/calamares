@@ -1,0 +1,62 @@
+Author: Kel Modderman <kelvmod@gmail.com>
+Description: Keep the target's resolv.conf symlink.
+ networkcfg replaced the target's /etc/resolv.conf with the live system's.
+ When the live file is a regular file and the target's is a symlink, e.g.
+ systemd-resolved's stub, the installed system kept a stale, unmanaged copy
+ and NetworkManager fell back to rc-manager=resolvconf, which fails against
+ systemd-resolved. Keep the symlink and copy the live file to where it points
+ inside the target instead, so the chroot still has DNS during the install.
+Forwarded: no
+Last-Update: 2026-10-12
+
+--- a/src/modules/networkcfg/main.py
++++ b/src/modules/networkcfg/main.py
+@@ -93,6 +93,36 @@ def path_pair(root_mount_point, relative_path):
+     return ("/" + relative_path, os.path.join(root_mount_point, relative_path))
+ 
+ 
++def copy_through_link(root_mount_point, source, link):
++    """
++    Copies a file over the target of a symlink in the target system.
++    """
++    if not os.path.exists(source):
++        return
++
++    destination = os.readlink(link)
++    if os.path.isabs(destination):
++        destination = os.path.join(root_mount_point, destination.lstrip("/"))
++    else:
++        destination = os.path.join(os.path.dirname(link), destination)
++    destination = os.path.realpath(destination)
++
++    root = os.path.realpath(root_mount_point)
++    if os.path.commonpath([root, destination]) != root or os.path.isdir(destination):
++        libcalamares.utils.debug(
++            "Not copying {} through {} to {}".format(source, link, destination)
++            )
++        return
++
++    try:
++        os.makedirs(os.path.dirname(destination), exist_ok=True)
++        shutil.copy(source, destination)
++    except Exception as err:
++        libcalamares.utils.debug(
++            "Can't copy {} to {}: {}".format(source, destination, err)
++            )
++
++
+ def run():
+     """
+     Setup network configuration
+@@ -169,7 +199,10 @@ network:
+ 
+     # We need to overwrite the default resolv.conf in the chroot.
+     source_resolv, target_resolv = path_pair(root_mount_point, "etc/resolv.conf")
+-    if source_resolv != target_resolv and os.path.exists(source_resolv):
++    if source_resolv != target_resolv and os.path.islink(target_resolv):
++        # e.g. systemd-resolved's stub; keep it
++        copy_through_link(root_mount_point, source_resolv, target_resolv)
++    elif source_resolv != target_resolv and os.path.exists(source_resolv):
+         try:
+             os.remove(target_resolv)
+         except Exception as err:
